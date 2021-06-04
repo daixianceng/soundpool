@@ -37,6 +37,10 @@ abstract class SoundpoolPlatform extends PlatformInterface {
     throw UnimplementedError('loadUri() has not been implemented');
   }
 
+  Future<int> loadNote(int poolId, int index, String type) {
+    throw UnimplementedError('loadNote() has not been implemented');
+  }
+
   Future<void> dispose(int poolId) {
     throw UnimplementedError('dispose() has not been implemented');
   }
@@ -45,7 +49,8 @@ abstract class SoundpoolPlatform extends PlatformInterface {
     throw UnimplementedError('release() has not been implemented');
   }
 
-  Future<int> play(int poolId, int soundId, int repeat, double rate) {
+  Future<int> play(int poolId, int soundId, int repeat, double rate,
+      double volumeLeft, double volumeRight) {
     throw UnimplementedError('play() has not been implemented');
   }
 

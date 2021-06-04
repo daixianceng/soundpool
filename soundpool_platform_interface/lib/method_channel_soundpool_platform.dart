@@ -1,15 +1,16 @@
 import 'dart:typed_data';
 
 import 'package:flutter/services.dart';
-import 'package:soundpool_platform_interface/soundpool_platform_interface.dart';
+import 'soundpool_platform_interface.dart';
 
 class MethodChannelSoundpoolPlatform extends SoundpoolPlatform {
   static const MethodChannel _channel =
       const MethodChannel('pl.ukaszapps/soundpool');
 
   @override
-  Future<int> init(int streamType, int maxStreams) async => (await _channel.invokeMethod(
-      "initSoundpool", {"maxStreams": maxStreams, "streamType": streamType}))!;
+  Future<int> init(int streamType, int maxStreams) async =>
+      (await _channel.invokeMethod("initSoundpool",
+          {"maxStreams": maxStreams, "streamType": streamType}))!;
 
   @override
   Future<int> loadUri(int poolId, String uri, int priority) async =>
@@ -17,17 +18,26 @@ class MethodChannelSoundpoolPlatform extends SoundpoolPlatform {
           "loadUri", {"poolId": poolId, "uri": uri, "priority": priority}))!;
 
   @override
-  Future<int> loadUint8List(int poolId, Uint8List rawSound, int priority) async =>
+  Future<int> loadUint8List(
+          int poolId, Uint8List rawSound, int priority) async =>
       (await _channel.invokeMethod("load",
           {"poolId": poolId, "rawSound": rawSound, "priority": priority}))!;
 
   @override
-  Future<int> play(int poolId, int soundId, int repeat, double rate) async =>
+  Future<int> loadNote(int poolId, int index, String type) async =>
+      (await _channel.invokeMethod(
+          "loadNote", {"poolId": poolId, "index": index, "type": type}))!;
+
+  @override
+  Future<int> play(int poolId, int soundId, int repeat, double rate,
+          double volumeLeft, double volumeRight) async =>
       (await _channel.invokeMethod("play", {
         "poolId": poolId,
         "soundId": soundId,
         "repeat": repeat,
-        "rate": rate
+        "rate": rate,
+        "volumeLeft": volumeLeft,
+        "volumeRight": volumeRight
       }))!;
 
   @override
@@ -72,7 +82,7 @@ class MethodChannelSoundpoolPlatform extends SoundpoolPlatform {
   @override
   Future<void> dispose(int poolId) => _channel.invokeMethod("dispose", {
         "poolId": poolId,
-      }); 
+      });
 
   @override
   Future<void> release(int poolId) =>

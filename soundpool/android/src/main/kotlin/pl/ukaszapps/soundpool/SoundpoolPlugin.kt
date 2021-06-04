@@ -95,6 +95,97 @@ internal class SoundpoolWrapper(private val context: Context, private val maxStr
 
     private val loadingSoundsMap = HashMap<Int, Result>()
 
+    private val moderateList = listOf<Int>(
+        R.raw.moderate_1,
+        R.raw.moderate_2,
+        R.raw.moderate_3,
+        R.raw.moderate_4,
+        R.raw.moderate_5,
+        R.raw.moderate_6,
+        R.raw.moderate_7,
+        R.raw.moderate_8,
+        R.raw.moderate_9,
+        R.raw.moderate_10,
+        R.raw.moderate_11,
+        R.raw.moderate_12,
+        R.raw.moderate_13,
+        R.raw.moderate_14,
+        R.raw.moderate_15,
+        R.raw.moderate_16,
+        R.raw.moderate_17,
+        R.raw.moderate_18,
+        R.raw.moderate_19,
+        R.raw.moderate_20,
+        R.raw.moderate_21,
+        R.raw.moderate_22,
+        R.raw.moderate_23,
+        R.raw.moderate_24,
+        R.raw.moderate_25,
+        R.raw.moderate_26,
+        R.raw.moderate_27,
+        R.raw.moderate_28,
+        R.raw.moderate_29,
+        R.raw.moderate_30,
+        R.raw.moderate_31,
+        R.raw.moderate_32,
+        R.raw.moderate_33,
+        R.raw.moderate_34,
+        R.raw.moderate_35,
+        R.raw.moderate_36,
+        R.raw.moderate_37,
+        R.raw.moderate_38,
+        R.raw.moderate_39,
+        R.raw.moderate_40,
+        R.raw.moderate_41,
+        R.raw.moderate_42,
+        R.raw.moderate_43,
+        R.raw.moderate_44,
+        R.raw.moderate_45,
+        R.raw.moderate_46,
+        R.raw.moderate_47,
+        R.raw.moderate_48,
+        R.raw.moderate_49,
+        R.raw.moderate_50,
+        R.raw.moderate_51,
+        R.raw.moderate_52,
+        R.raw.moderate_53,
+        R.raw.moderate_54,
+        R.raw.moderate_55,
+        R.raw.moderate_56,
+        R.raw.moderate_57,
+        R.raw.moderate_58,
+        R.raw.moderate_59,
+        R.raw.moderate_60,
+        R.raw.moderate_61,
+        R.raw.moderate_62,
+        R.raw.moderate_63,
+        R.raw.moderate_64,
+        R.raw.moderate_65,
+        R.raw.moderate_66,
+        R.raw.moderate_67,
+        R.raw.moderate_68,
+        R.raw.moderate_69,
+        R.raw.moderate_70,
+        R.raw.moderate_71,
+        R.raw.moderate_72,
+        R.raw.moderate_73,
+        R.raw.moderate_74,
+        R.raw.moderate_75,
+        R.raw.moderate_76,
+        R.raw.moderate_77,
+        R.raw.moderate_78,
+        R.raw.moderate_79,
+        R.raw.moderate_80,
+        R.raw.moderate_81,
+        R.raw.moderate_82,
+        R.raw.moderate_83,
+        R.raw.moderate_84,
+        R.raw.moderate_85,
+        R.raw.moderate_86,
+        R.raw.moderate_87,
+        R.raw.moderate_88
+    )
+
     private inline fun ui(crossinline block: () -> Unit) {
         uiThreadHandler.post { block() }
     }
@@ -196,20 +287,46 @@ internal class SoundpoolWrapper(private val context: Context, private val maxStr
                     }
                 }
             }
+            "loadNote" -> {
+                loadExecutor.execute {
+                    try {
+                        val arguments = call.arguments as Map<String, Any>
+                        val index = arguments["index"] as Int
+                        val type = arguments["type"] as String
+
+                        val soundId = when(type) {
+                            "moderate" -> soundPool.load(context, moderateList[index], 1)
+                            // "short" -> soundPool.load(context, shortList[index], 1)
+                            else -> -1
+                        } 
+
+                        ui { result.success(soundId) }
+                    } catch (t: Throwable) {
+                        ui { result.error("Loading notes failure", t.message, null) }
+                    }
+                }
+            }
             "release" -> {
                 releaseSoundpool()
                 soundPool = createSoundpool()
                 result.success(null)
             }
             "play" -> {
-                val arguments = call.arguments as Map<String, Any>
-                val soundId: Int = (arguments["soundId"] as Int?)!!
-                val repeat: Int = arguments["repeat"] as Int? ?: 0
-                val rate: Double = arguments["rate"] as Double? ?: 1.0
-                val volumeInfo = volumeSettingsForSoundId(soundId = soundId)
-                val streamId = soundPool.play(soundId, volumeInfo.left, volumeInfo.right, 0,
-                        repeat, rate.toFloat())
-                result.success(streamId)
+                loadExecutor.execute {
+                    val arguments = call.arguments as Map<String, Any>
+                    val soundId: Int = (arguments["soundId"] as Int?)!!
+                    val repeat: Int = arguments["repeat"] as Int? ?: 0
+                    val rate: Double = arguments["rate"] as Double? ?: 1.0
+                    val volumeLeft: Double = arguments["volumeLeft"] as Double? ?: 1.0
+                    val volumeRight: Double = arguments["volumeRight"] as Double? ?: 1.0
+                    // val volumeInfo = volumeSettingsForSoundId(soundId = soundId)
+                    val streamId = soundPool.play(soundId, volumeLeft.toFloat(), volumeRight.toFloat(), 0,
+                            repeat, rate.toFloat())
+                    ui {
+                        result.success(streamId)
+                    }
+                }
+
             }
             "pause" -> {
                 val arguments = call.arguments as Map<String, Int>
