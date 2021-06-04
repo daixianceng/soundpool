@@ -10,13 +10,14 @@ class Soundpool {
 
   final int _maxStreams;
   final StreamType _streamType;
+  final Map<String, dynamic> _platformOptions;
   final Completer<int> _soundpoolId = Completer();
 
   SoundpoolPlatform get _platformInstance => SoundpoolPlatform.instance;
 
   bool _disposed = false;
 
-  Soundpool._([StreamType type = StreamType.music, int maxStreams = 1])
+  Soundpool._(this._platformOptions, [StreamType type = StreamType.music, int maxStreams = 1])
       : assert(maxStreams > 0),
         _streamType = type,
         _maxStreams = maxStreams;
@@ -25,9 +26,22 @@ class Soundpool {
   /// Soundpool can play up to [maxStreams] of simultaneous streams
   ///
   /// *Note:* Optional [streamType] parameter has effect on Android only.
-  factory Soundpool(
-      {StreamType streamType = StreamType.music, int maxStreams = 1}) {
-    return Soundpool._(streamType, maxStreams).._connect();
+  @Deprecated('Use `fromOptions` instead')
+  factory Soundpool({StreamType streamType = StreamType.music, int maxStreams = 1}) =>
+      Soundpool.fromOptions(
+        options: SoundpoolOptions(
+          streamType: streamType,
+          maxStreams: maxStreams,
+        ),
+      );
+
+  /// Creates the Soundpool instance with stream type setting set.
+  factory Soundpool.fromOptions({SoundpoolOptions options = SoundpoolOptions._default}) {
+    return Soundpool._(
+      options._platformOptions,
+      options.streamType,
+      options.maxStreams,
+    ).._connect();
   }
 
   /// Prepares sound for playing
@@ -40,8 +54,7 @@ class Soundpool {
   ///
   /// ## web
   /// [priority] is ignored.
-  Future<int> load(ByteData rawSound,
-          {int priority = _DEFAULT_SOUND_PRIORITY}) =>
+  Future<int> load(ByteData rawSound, {int priority = _DEFAULT_SOUND_PRIORITY}) =>
       loadUint8List(rawSound.buffer.asUint8List(), priority: priority);
 
   /// load all
@@ -64,12 +77,10 @@ class Soundpool {
   ///
   /// ## web
   /// [priority] is ignored.
-  Future<int> loadUint8List(Uint8List rawSound,
-      {int priority = _DEFAULT_SOUND_PRIORITY}) async {
+  Future<int> loadUint8List(Uint8List rawSound, {int priority = _DEFAULT_SOUND_PRIORITY}) async {
     assert(!_disposed, "Soundpool instance was already disposed");
     int poolId = await _soundpoolId.future;
-    int soundId =
-        await _platformInstance.loadUint8List(poolId, rawSound, priority);
+    int soundId = await _platformInstance.loadUint8List(poolId, rawSound, priority);
     return soundId;
   }
 
@@ -80,8 +91,7 @@ class Soundpool {
   ///
   /// ## web
   /// [priority] is ignored.
-  Future<int> loadUri(String uri,
-      {int priority = _DEFAULT_SOUND_PRIORITY}) async {
+  Future<int> loadUri(String uri, {int priority = _DEFAULT_SOUND_PRIORITY}) async {
     assert(!_disposed, "Soundpool instance was already disposed");
     int poolId = await _soundpoolId.future;
     int soundId = await _platformInstance.loadUri(poolId, uri, priority);
@@ -103,9 +113,7 @@ class Soundpool {
   /// ## web
   /// [priority] and [repeat] are ignored. The sound is played only once.
   Future<int> loadAndPlay(ByteData rawSound,
-      {int priority = _DEFAULT_SOUND_PRIORITY,
-      int repeat = 0,
-      double rate = 1.0}) async {
+      {int priority = _DEFAULT_SOUND_PRIORITY, int repeat = 0, double rate = 1.0}) async {
     int soundId = await load(rawSound, priority: priority);
     if (soundId > -1) {
       play(soundId, repeat: repeat, rate: rate);
@@ -127,9 +135,7 @@ class Soundpool {
   /// ## web
   /// [priority] and [repeat] are ignored. The sound is played only once.
   Future<int> loadAndPlayUint8List(Uint8List rawSound,
-      {int priority = _DEFAULT_SOUND_PRIORITY,
-      int repeat = 0,
-      double rate = 1.0}) async {
+      {int priority = _DEFAULT_SOUND_PRIORITY, int repeat = 0, double rate = 1.0}) async {
     assert(!_disposed, "Soundpool instance was already disposed");
     int soundId = await loadUint8List(rawSound, priority: priority);
     if (soundId > -1) {
@@ -151,9 +157,7 @@ class Soundpool {
   /// ## web
   /// [priority] and [repeat] are ignored. The sound is played only once.
   Future<int> loadAndPlayUri(String uri,
-      {int priority = _DEFAULT_SOUND_PRIORITY,
-      int repeat = 0,
-      double rate = 1.0}) async {
+      {int priority = _DEFAULT_SOUND_PRIORITY, int repeat = 0, double rate = 1.0}) async {
     assert(!_disposed, "Soundpool instance was already disposed");
     int soundId = await loadUri(uri, priority: priority);
     if (soundId > -1) {
@@ -275,8 +279,8 @@ class Soundpool {
     if (volume != null && volumeRight == null) {
       volumeRight = volume;
     }
-    await _soundpoolId.future.then((poolId) => _platformInstance.setVolume(
-        poolId, soundId, streamId, volumeLeft, volumeRight));
+    await _soundpoolId.future.then((poolId) =>
+        _platformInstance.setVolume(poolId, soundId, streamId, volumeLeft, volumeRight));
   }
 
   /// Sets playback rate. A value of 1.0 means normal speed, 0.5 - half speed, 2.0 - double speed.
@@ -291,8 +295,8 @@ class Soundpool {
       playbackRate >= 0.5 && playbackRate <= 2.0,
       "'playbackRate' has to be value in (0.5 - 2.0) range",
     );
-    await _soundpoolId.future.then(
-        (poolId) => _platformInstance.setRate(poolId, streamId, playbackRate));
+    await _soundpoolId.future
+        .then((poolId) => _platformInstance.setRate(poolId, streamId, playbackRate));
   }
 
   /// Releases loaded sounds
@@ -300,16 +304,14 @@ class Soundpool {
   /// Should be called to clear buffered sounds
   Future<void> release() async {
     assert(!_disposed, "Soundpool instance was already disposed");
-    await _soundpoolId.future
-        .then((poolId) => _platformInstance.release(poolId));
+    await _soundpoolId.future.then((poolId) => _platformInstance.release(poolId));
   }
 
   /// Disposes soundpool
   ///
   /// The Soundpool instance is not usable anymore
   void dispose() {
-    _soundpoolId.future
-        .then((poolId) => _platformInstance.dispose(poolId), onError: (_) {});
+    _soundpoolId.future.then((poolId) => _platformInstance.dispose(poolId), onError: (_) {});
     _disposed = true;
   }
 
@@ -317,7 +319,7 @@ class Soundpool {
 
   /// Connects to native Soundpool instance
   _connect() async {
-    final int id = await _platformInstance.init(_streamType.index, _maxStreams);
+    final int id = await _platformInstance.init(_streamType.index, _maxStreams, _platformOptions);
     if (id >= 0) {
       _soundpoolId.complete(id);
     } else {
@@ -397,10 +399,7 @@ class AudioStreamControl {
   /// At least [volume] or both [volumeLeft] and [volumeRight] have to be passed
   Future setVolume({double? volume, double? volumeLeft, double? volumeRight}) {
     return _pool.setVolume(
-        streamId: stream,
-        volume: volume,
-        volumeLeft: volumeLeft,
-        volumeRight: volumeRight);
+        streamId: stream, volume: volume, volumeLeft: volumeLeft, volumeRight: volumeRight);
   }
 
   /// Sets playback rate. A value of 1.0 means normal speed, 0.5 - half speed, 2.0 - double speed.
@@ -412,4 +411,84 @@ class AudioStreamControl {
       playbackRate: playbackRate,
     );
   }
+}
+
+class SoundpoolOptions {
+  /// The type of stream used by the pool
+  final StreamType streamType;
+
+  /// Maximum number of pararell sounds being played
+  final int maxStreams;
+
+  /// Android specific options
+  final SoundpoolOptionsAndroid androidOptions;
+
+  /// iOS specific options
+  final SoundpoolOptionsIos iosOptions;
+
+  /// Web specific options
+  final SoundpoolOptionsWeb webOptions;
+
+  /// MacOS specific options
+  final SoundpoolOptionsMacos macosOptions;
+
+  const SoundpoolOptions({
+    this.streamType = StreamType.music,
+    this.maxStreams = 1,
+    this.androidOptions = SoundpoolOptionsAndroid._default,
+    this.iosOptions = SoundpoolOptionsIos._default,
+    this.webOptions = SoundpoolOptionsWeb._default,
+    this.macosOptions = SoundpoolOptionsMacos._default,
+  });
+
+  static const _default = SoundpoolOptions();
+
+  Map<String, dynamic> get _platformOptions => Map.fromEntries([
+        ...androidOptions._toOptionsMap().entries.map((e) => MapEntry('android_${e.key}', e.value)),
+        ...iosOptions._toOptionsMap().entries.map((e) => MapEntry('ios_${e.key}', e.value)),
+        ...webOptions._toOptionsMap().entries.map((e) => MapEntry('web_${e.key}', e.value)),
+        ...macosOptions._toOptionsMap().entries.map((e) => MapEntry('macos_${e.key}', e.value)),
+      ]);
+}
+
+class SoundpoolOptionsAndroid {
+  static const _default = SoundpoolOptionsAndroid();
+  const SoundpoolOptionsAndroid();
+
+  Map<String, dynamic> _toOptionsMap() => {};
+}
+
+class SoundpoolOptionsIos {
+  static const _default = SoundpoolOptionsIos();
+
+  /// When set the `rate` value in [Soundpool.play] and [Soundpool.setRate] wound have effect
+  /// Default value: `true`
+  final enableRate;
+
+  const SoundpoolOptionsIos({this.enableRate = true});
+
+  Map<String, dynamic> _toOptionsMap() => {
+        'enableRate': enableRate,
+      };
+}
+
+class SoundpoolOptionsMacos {
+  static const _default = SoundpoolOptionsMacos();
+
+  /// When set the `rate` value in [Soundpool.play] and [Soundpool.setRate] wound have effect
+  /// Default value: `true`
+  final enableRate;
+
+  const SoundpoolOptionsMacos({this.enableRate = true});
+
+  Map<String, dynamic> _toOptionsMap() => {
+        'enableRate': enableRate,
+      };
+}
+
+class SoundpoolOptionsWeb {
+  static const _default = SoundpoolOptionsWeb();
+
+  const SoundpoolOptionsWeb();
+  Map<String, dynamic> _toOptionsMap() => {};
 }
